@@ -1,0 +1,9 @@
+{
+  "name": "socrates",
+  "description": "open-source analytics server",
+  "author": "Chris Maddox <tyre77@gmail.com>",
+  "dependencies": {
+    "redis": "0.7.x"
+  },
+  "engine": "node >= 0.6.17"
+}
