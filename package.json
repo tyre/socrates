@@ -3,7 +3,9 @@
   "description": "open-source analytics server",
   "author": "Chris Maddox <tyre77@gmail.com>",
   "dependencies": {
-    "redis": "0.7.x"
+    "redis": "0.7.x",
+    "router": "0.6.x"
+    "MD5": "1.x.x"
   },
   "engine": "node >= 0.6.17"
 }
