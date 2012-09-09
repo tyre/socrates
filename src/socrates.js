@@ -18,6 +18,7 @@ function track(eventName) {
 }
 
 $(function(){
+  track('pageView');
   $('#herp').click(function(e){
     console.log('herp');
   });

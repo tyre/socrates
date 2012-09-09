@@ -11,9 +11,7 @@ var redis = require('redis');
 var client = redis.createClient();
 
 routing.options('*', function(request, response){
-  console.log("OPTIONS MOTHAFUCKA");
   var origin = (request.headers.origin || "*");
-  console.log('ORIGIN: ' + origin);
   response.writeHead("204", {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET, POST, PUT, OPTIONS",
@@ -26,11 +24,11 @@ routing.options('*', function(request, response){
 
 routing.put('/trackEvent/{eventName}', function(request, response){
   request.on('data', function(chunk){
-    console.info(chunk.toString());
     hash = querystring.parse(chunk.toString());
     var key = redisKeyFor(request.params.eventName, parseInt(hash.time));
-    // client.incr(key);
-    console.log('Incrementing ' + key);
+    client.incr(key);
+    pushSetKey(key,)
+    console.info('Incrementing ' + key);
   })
   response.writeHead(200, {
     "Content-Type": "application/json",
@@ -103,11 +101,10 @@ function redisKeyFor (keyword, time) {
   formattedDate = formatDate(time)
   var key = [SocratesSettings.prefix,keyword,formattedDate].join('-');
   pushSetKey(key, keyword);
-  console.info(key);
   return key;
 }
 
 function pushSetKey (key, keyword) {
-  var setKey = [SocratesSettings.prefix, keyword, 'keys'].join('-');
+  var setKey = [SocratesSettings.prefix, keyword, 'KEYS'].join('-');
   client.sadd(setKey, key);
 }
