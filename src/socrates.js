@@ -1,7 +1,19 @@
-function Socrates () {
-  this.track = function(eventName){
 
-  }
+function track(eventName) {
+  jqxhr = $.ajax('http://localhost:7738/trackEvent/' + eventName, {
+    type: 'PUT',
+    data: {time: Date.now()}
+  });
+
+  jqxhr.success(function(response){
+    console.log('YAY');
+    console.log(response);
+  });
+
+  jqxhr.error(function(response){
+    console.log('BOO');
+    console.log(response);
+  });
 }
 
 $(function(){
@@ -10,11 +22,12 @@ $(function(){
   });
 
   $('.socrates').click(function(e){
-    console.log('derp');
+    self = $(this);
+    track(self.data('socrates'));
   });
 
-  $('.socrates').width(function(){
-    var child = $(this).children()[0]
-    $(this).width($(child).width()+1);
-  });
+  // $('.socrates').width(function(){
+  //   var child = $(this).children()[0]
+  //   $(this).width($(child).width()+1);
+  // });
 });

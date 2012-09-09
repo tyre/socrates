@@ -1,5 +1,4 @@
 module.exports.settings = {
-  "port" : 6754,
-  "prefix" : "Socrates",
-  "postfix" : ""
+  "port" : 7738,
+  "prefix" : "Socrates"
   }

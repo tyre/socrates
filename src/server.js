@@ -1,15 +1,42 @@
 const SocratesSettings = require('../settings.js').settings;
 sprintf = require('../lib/sprintf').sprintf;
 //1440 minutes in a day
-DATE_FORMAT = '%04u-%02u-%02u-%02u-%02u'
+DATE_FORMAT = '%04u-%02u-%02u-%02u-%02u';
 var http = require('http');
+var querystring = require('querystring');
 var router = require('router');
 var routing = router();
 var server = http.createServer(routing);
 var redis = require('redis');
 var client = redis.createClient();
-routing.get('/', function(request, response){
 
+routing.options('*', function(request, response){
+  console.log("OPTIONS MOTHAFUCKA");
+  var origin = (request.headers.origin || "*");
+  console.log('ORIGIN: ' + origin);
+  response.writeHead("204", {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Accept",
+    "Access-Control-Max-Age": 10,
+    "content-length": 0
+  });
+  response.end();
+});
+
+routing.put('/trackEvent/{eventName}', function(request, response){
+  request.on('data', function(chunk){
+    console.info(chunk.toString());
+    hash = querystring.parse(chunk.toString());
+    console.log(hash.time);
+    var key = redisKeyFor(request.params.eventName, parseInt(hash.time));
+    // client.incr(key);
+    console.log('Incrementing ' + key);
+  })
+  response.writeHead(200, {
+    "Content-Type": "application/json",
+    "Access-Control-Allow-Credentials": true});
+  response.end();
 });
 
 routing.get('/trackEvent/{eventName}', function(request, response){
@@ -23,23 +50,28 @@ routing.get('/trackEvent/{eventName}', function(request, response){
   })
 });
 
-routing.post('/trackEvent/{eventName}/{timeStart}/{timeEnd}', function(request, response){
-  // timeStart and timeStop should be in ms
+routing.get('/trackEvent/{eventName}/{timeStart}/{timeEnd}', function(request, response){
+  // timeStart and timeStop should be in ms since Jan 1, 1970
   var start = parseInt(timeStart), stop = parseInt(timeEnd);
   if(start && stop){
+    response.writeHead(200,{"Content-Type": "application/json"});
     var startKey = redisKeyFor(request.params.eventName, start);
     var stopKey = redisKeyFor(request.params.eventName, stop);
-    // TODO get keys between these times
+
   } else {
-
+    response.writeHead(422)
+    response.end()
   }
-
 });
 
-routing.post('/trackEvent/{eventName}', function(request, response){
-  var key = redisKeyFor(request.params.eventName);
+routing.get('post/trackEvent/{eventName}', function(request, response){
+  hash = JSON.parse(request.toString());
+  var key = redisKeyFor(request.params.eventName, hash['time']);
   client.incr(key);
-  response.writeHead(200);
+  console.log('Incrementing ' + key);
+  response.writeHead(200, {
+    "Content-Type": "application/json",
+    "Access-Control-Allow-Credentials": true});
   response.end();
 });
 
@@ -67,18 +99,24 @@ function redisGet (k, callback) {
 function formatDate (ms) {
   var time = new Date(ms);
   var y = time.getFullYear(),
-    m = time.getMonth(),
-    d = time.getDate(),
-    h = time.getHours(),
-    min = time.getMinutes();
+  m = time.getMonth(),
+  d = time.getDate(),
+  h = time.getHours(),
+  min = time.getMinutes();
   return sprintf(DATE_FORMAT,y,m,d,h,min);
 }
 
-function redisKeyFor (string, time=undefined) {
+function redisKeyFor (keyword, time) {
   if(!time)
     time = Date.getTime();
   formattedDate = formatDate(time)
-  var key = string + '-' + formattedDate;
+  var key = [SocratesSettings.prefix,keyword,formattedDate].join('-');
+  pushSetKey(key, keyword);
   console.info(key);
   return key;
+}
+
+function pushSetKey (key, keyword) {
+  var setKey = [SocratesSettings.prefix, keyword, 'keys'].join('-');
+  client.sadd(setKey, key);
 }

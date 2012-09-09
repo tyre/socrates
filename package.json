@@ -2,10 +2,10 @@
   "name": "socrates",
   "description": "open-source analytics server",
   "author": "Chris Maddox <tyre77@gmail.com>",
+  "version": "0.1.0",
   "dependencies": {
-    "redis": "0.7.x",
-    "router": "0.6.x"
-    "MD5": "1.x.x"
+    "redis": "0.7.z",
+    "router": "0.6.z"
   },
   "engine": "node >= 0.6.17"
 }
