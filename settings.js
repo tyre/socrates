@@ -1,3 +1,4 @@
 module.exports.settings = {
-  port: 7738
+  port: 7738,
+  keyGenUrl: 'http://localhost:7737/keygen/event'
 }

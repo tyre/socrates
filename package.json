@@ -4,8 +4,9 @@
   "author": "Chris Maddox <tyre77@gmail.com>",
   "version": "0.1.0",
   "dependencies": {
-    "redis": "0.7.z",
-    "router": "0.6.z"
+    "redis": "0.7.x",
+    "router": "0.6.x",
+    "jquery": "1.x.x"
   },
   "engine": "node >= 0.6.17"
 }

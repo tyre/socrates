@@ -2,6 +2,7 @@ const SocratesSettings = require('../settings.js').settings;
 sprintf = require('../lib/sprintf').sprintf;
 //1440 minutes in a day
 DATE_FORMAT = '%04u-%02u-%02u-%02u-%02u-%02u';
+var $ = require('jquery');
 var http = require('http');
 var querystring = require('querystring');
 var router = require('router');
@@ -23,12 +24,15 @@ routing.options('*', function(request, response){
 });
 
 routing.put('/{appName}/trackEvent/{eventName}', function(request, response){
+  eventName = request.params.eventName
+  appName = request.params.appName
   request.on('data', function(chunk){
     hash = querystring.parse(chunk.toString());
-    var key = redisKeyFor(request.params.eventName, parseInt(hash.time));
-    client.incr(key);
-    pushSetKey(key,request.params.eventName)
+    redisKeyFor(appName, eventName, parseInt(hash.time), function(key){
+    // client.incr(key);
+    pushSetKey(key, appName, eventName)
     console.info('Incrementing ' + key);
+    });
   })
   response.writeHead(200, {
     "Content-Type": "application/json",
@@ -65,16 +69,27 @@ function formatDate (ms) {
   return sprintf(DATE_FORMAT,y,m,d,h,min,s);
 }
 
-function redisKeyFor (keyword, time) {
-  if(!time)
-    time = Date.UTC();
-  formattedDate = formatDate(time)
-  var key = [SocratesSettings.prefix,keyword,formattedDate].join('-');
-  pushSetKey(key, keyword);
-  return key;
+function redisKeyFor (appName, eventName, time, callback) {
+  console.log([appName, eventName, time].join('___'));
+  jqxhr = $.get(SocratesSettings.keyGenUrl, {
+      time: time,
+      'app-name': appName,
+      'event-name': eventName
+    });
+
+  jqxhr.done(function(r){
+    console.log(r.key);
+    callback(r.key)
+  });
+
+  jqxhr.fail(function(r){
+    console.error("ERROR\n============\n");
+    console.error(r);
+  });
 }
 
-function pushSetKey (key, appName, keyword) {
-  var setKey = [appName, keyword, 'KEYS'].join('-');
+function pushSetKey (key, appName, eventName) {
+  var setKey = [appName, eventName, 'KEYS'].join('-');
+  console.log(setKey + "\n\n\n\n" + key);
   client.sadd(setKey, key);
 }
