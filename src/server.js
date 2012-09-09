@@ -1,7 +1,7 @@
 const SocratesSettings = require('../settings.js').settings;
 sprintf = require('../lib/sprintf').sprintf;
 //1440 minutes in a day
-DATE_FORMAT = '%04u-%02u-%02u-%02u-%02u';
+DATE_FORMAT = '%04u-%02u-%02u-%02u-%02u-%02u';
 var http = require('http');
 var querystring = require('querystring');
 var router = require('router');
@@ -28,14 +28,15 @@ routing.put('/trackEvent/{eventName}', function(request, response){
   request.on('data', function(chunk){
     console.info(chunk.toString());
     hash = querystring.parse(chunk.toString());
-    console.log(hash.time);
     var key = redisKeyFor(request.params.eventName, parseInt(hash.time));
     // client.incr(key);
     console.log('Incrementing ' + key);
   })
   response.writeHead(200, {
     "Content-Type": "application/json",
-    "Access-Control-Allow-Credentials": true});
+    "Access-Control-Allow-Credentials": true,
+    "Access-Control-Allow-Origin": "*"
+  });
   response.end();
 });
 
@@ -62,17 +63,6 @@ routing.get('/trackEvent/{eventName}/{timeStart}/{timeEnd}', function(request, r
     response.writeHead(422)
     response.end()
   }
-});
-
-routing.get('post/trackEvent/{eventName}', function(request, response){
-  hash = JSON.parse(request.toString());
-  var key = redisKeyFor(request.params.eventName, hash['time']);
-  client.incr(key);
-  console.log('Incrementing ' + key);
-  response.writeHead(200, {
-    "Content-Type": "application/json",
-    "Access-Control-Allow-Credentials": true});
-  response.end();
 });
 
 server.on('listening', function(){
@@ -102,13 +92,14 @@ function formatDate (ms) {
   m = time.getMonth(),
   d = time.getDate(),
   h = time.getHours(),
-  min = time.getMinutes();
-  return sprintf(DATE_FORMAT,y,m,d,h,min);
+  min = time.getMinutes(),
+  s = time.getSeconds();
+  return sprintf(DATE_FORMAT,y,m,d,h,min,s);
 }
 
 function redisKeyFor (keyword, time) {
   if(!time)
-    time = Date.getTime();
+    time = Date.UTC();
   formattedDate = formatDate(time)
   var key = [SocratesSettings.prefix,keyword,formattedDate].join('-');
   pushSetKey(key, keyword);

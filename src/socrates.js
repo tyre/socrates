@@ -1,8 +1,9 @@
 
 function track(eventName) {
+  var now_utc = new Date().getTime();
   jqxhr = $.ajax('http://localhost:7738/trackEvent/' + eventName, {
     type: 'PUT',
-    data: {time: Date.now()}
+    data: {time: now_utc}
   });
 
   jqxhr.success(function(response){
