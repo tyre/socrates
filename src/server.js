@@ -28,8 +28,9 @@ routing.put('/{appName}/trackEvent/{eventName}', function(request, response){
   appName = request.params.appName
   request.on('data', function(chunk){
     hash = querystring.parse(chunk.toString());
-    redisKeyFor(appName, eventName, parseInt(hash.time), function(key){
-    // client.incr(key);
+    data = { time: parseInt(hash.time) }
+    redisKeyFor(appName, eventName, data, function(key){
+    client.incr(key);
     pushSetKey(key, appName, eventName)
     console.info('Incrementing ' + key);
     });
@@ -69,16 +70,22 @@ function formatDate (ms) {
   return sprintf(DATE_FORMAT,y,m,d,h,min,s);
 }
 
-function redisKeyFor (appName, eventName, time, callback) {
-  console.log([appName, eventName, time].join('___'));
-  jqxhr = $.get(SocratesSettings.keyGenUrl, {
-      time: time,
-      'app-name': appName,
-      'event-name': eventName
-    });
+function redisURL (data) {
+ var url = SocratesSettings.keyGenUrl
+ if((data['start-time'] && data['end-time']) || data.time){
+  url += '/event'
+ } else {
+  url += '/event/unread'
+ }
+ return url
+}
+
+function redisKeyFor (appName, eventName, data, callback) {
+  $.extend(data,{'app-name': appName, 'event-name': eventName})
+  var url = redisURL(data)
+  jqxhr = $.get(url, data);
 
   jqxhr.done(function(r){
-    console.log(r.key);
     callback(r.key)
   });
 
@@ -89,7 +96,8 @@ function redisKeyFor (appName, eventName, time, callback) {
 }
 
 function pushSetKey (key, appName, eventName) {
-  var setKey = [appName, eventName, 'KEYS'].join('-');
-  console.log(setKey + "\n\n\n\n" + key);
-  client.sadd(setKey, key);
+  redisKeyFor(appName, eventName, {}, function(setKey){
+    console.log(setKey + "\n" + key);
+    client.sadd(setKey, key);
+  });
 }

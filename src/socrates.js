@@ -5,31 +5,12 @@ function track(eventName) {
     type: 'PUT',
     data: {time: now_utc}
   });
-
-  jqxhr.success(function(response){
-    console.log('YAY');
-    console.log(response);
-  });
-
-  jqxhr.error(function(response){
-    console.log('BOO');
-    console.log(response);
-  });
 }
 
 $(function(){
   track('pageView');
-  $('#herp').click(function(e){
-    console.log('herp');
+  $('a').click(function(){
+    track('click-'+ $(this).attr('href'));
   });
 
-  $('.socrates').click(function(e){
-    self = $(this);
-    track(self.data('socrates'));
-  });
-
-  // $('.socrates').width(function(){
-  //   var child = $(this).children()[0]
-  //   $(this).width($(child).width()+1);
-  // });
 });
