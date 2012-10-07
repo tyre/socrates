@@ -1,0 +1,29 @@
+<script src='../lib/jquery1.8.0.js'></script>
+<div class='ga-track' data-ga-data='pages#Show,fb_share'>click me!</div>
+<div class='ga-track' data-ga-binding='mouseover' data-ga-data='Vietnam,    MalibuMadness, __harold'>hover me!</div>
+<script type="text/javascript">
+window.gaTrack = function(selectors){
+  var _gaq = _gaq || [];
+  for (var i = selectors.length - 1; i >= 0; i--) {
+    var selector = selectors[i]
+    var trackedElements = $(selector);
+    for (var i = trackedElements.length - 1; i >= 0; i--) {
+      var elem = $(trackedElements[i]);
+      var binding = elem.data('ga-binding') || 'click';
+      var trackingFn = $('.ga-track').on ? 'on' : 'bind' //use on, unless pre jquery 1.7
+      elem[trackingFn](binding, function(evnt){
+        console.log(evnt);
+        var element = $(this);
+        var gaEvent = element.data('ga-event') || '_trackEvent';
+        var gaData = element.data('ga-data').split(/,\s*/);
+        gaData.unshift(gaEvent);
+        _gaq.push(gaData);
+      })
+    };
+  };
+};
+
+$(function(){
+  gaTrack(['.ga-track']);
+});
+</script>
