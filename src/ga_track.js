@@ -10,7 +10,7 @@ $(function(){
       var gaEvent = element.data('ga-event') || '_trackEvent';
       var gaData = element.data('ga-data').split(/,\s*/);
       gaData.unshift(gaEvent);
-      _gaq.push(gaData)
-    })
+      _gaq.push(gaData);
+    });
   };
 }

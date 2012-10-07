@@ -4,21 +4,33 @@ var Socrates;
 Socrates = (function() {
 
   function Socrates(options) {
-    var defaults;
     if (options == null) {
       options = {};
     }
-    defaults = {
-      'app-name': 'default',
-      'agent-id': 'default',
-      'event-name': 'default',
-      'entity-id': 'default',
-      'variation-ids': 'default'
-    };
     this.getOrInitSession();
+    this.defaultOptions['session-id'] = this.sessionId;
+    this.config = this.mergeHash(defaults, options);
   }
 
+  Socrates.prototype.defaultOptions = {
+    'app-name': 'default',
+    'agent-id': 'default',
+    'event-name': 'default',
+    'entity-id': 'default',
+    'variation-ids': 'default',
+    'server-url': Socrates.serverUrl
+  };
+
+  Socrates.prototype.serverUrl = 'http://localhost:7738/t.gif';
+
   Socrates.prototype.sessionExpiresIn = 86400000;
+
+  Socrates.prototype.newSessionExpiry = function() {
+    var expDate;
+    expDate = new Date();
+    expDate.setTime(expDate.getTime() + sessionExpiresIn);
+    return expDate.toGMTString();
+  };
 
   Socrates.prototype.getOrInitSession = function() {
     var c;
@@ -47,13 +59,75 @@ Socrates = (function() {
     return found;
   };
 
+  Socrates.prototype.setCookie = function(c) {
+    var cStr;
+    return cStr = "" + c.name + "=" + c.value + ";expires=" + c.expires + ";path=" + c.path;
+  };
+
   Socrates.prototype.refreshCookie = function(c) {
-    var cookie, expDate;
+    var cookie;
     cookie = "" + c.name + "=" + c.value;
-    expDate = new Date();
-    expDate.setTime(expDate.getTime() + sessionExpiresIn);
-    cookie += "expires=" + (date.toGMTString());
+    cookie += "expires=" + (this.newSessionExpiry());
     return document.cookie = cookie;
+  };
+
+  Socrates.prototype.initSession = function() {
+    var cookie;
+    cookie = {
+      name: '_socc',
+      path: '/',
+      value: this.genSessionId(),
+      expires: this.newSessionExpiry()
+    };
+    return this.setCookie(cookie);
+  };
+
+  Socrates.prototype.genSessionId = function() {
+    var rand1, rand2;
+    rand1 = Math.floor(Math.random() * 100000);
+    rand2 = Math.floor(Math.random() * 100000);
+    return this.sessionId = "" + rand1 + (new Date().getTime()) + rand2;
+  };
+
+  Socrates.prototype.track = function(hash) {
+    var trackHash;
+    trackHash = this.mergeHash(this.config, hash);
+    trackHash.time || (trackHash.time = new Date().getTime());
+    return addGIF(trackHash);
+  };
+
+  Socrates.prototype.addGIF = function(h) {
+    var gif, s, src;
+    src = this.genGIFSrc(h);
+    gif = document.createElement('img');
+    gif.src = src;
+    gif.style.display = 'none';
+    s = document.getElementByTagName('script')[0];
+    return s.parentNode.insertBefore(gif, s);
+  };
+
+  Socrates.prototype.genGIFSrc = function(h) {
+    var p, src, _i, _len;
+    src = h['server-url'] + '?';
+    for (_i = 0, _len = h.length; _i < _len; _i++) {
+      p = h[_i];
+      if (h.hasOwnProperty(p) && p !== 'server-url') {
+        src += "" + p + "=" + h[p] + "&";
+      }
+    }
+    return src = src.substr(0, src.length - 1);
+  };
+
+  Socrates.prototype.mergeHash = function(h1, h2) {
+    var h3, p, _i, _len;
+    h3 = h1;
+    for (_i = 0, _len = h2.length; _i < _len; _i++) {
+      p = h2[_i];
+      if (h2.hasOwnProperty(p)) {
+        h3[p] = p;
+      }
+    }
+    return h3;
   };
 
   return Socrates;
