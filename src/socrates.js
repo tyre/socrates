@@ -3,32 +3,61 @@ var Socrates;
 
 Socrates = (function() {
 
-  function Socrates(options) {
+  function Socrates(selectors, options) {
     if (options == null) {
       options = {};
     }
     this.getOrInitSession();
-    this.defaultOptions['session-id'] = this.sessionId;
-    this.config = this.mergeHash(defaults, options);
+    this.defaults['session-id'] = this.sessionId;
+    this.config = this.mergeHash(this.defaults, options);
+    this.attachHandlers(selectors);
   }
 
-  Socrates.prototype.defaultOptions = {
+  Socrates.prototype.defaults = {
     'app-name': 'default',
     'agent-id': 'default',
     'event-name': 'default',
     'entity-id': 'default',
-    'variation-ids': 'default',
-    'server-url': Socrates.serverUrl
+    'variation-ids': [],
+    'server-url': 'http://localhost:7738/t.gif'
   };
 
-  Socrates.prototype.serverUrl = 'http://localhost:7738/t.gif';
+  Socrates.prototype.sessionDuration = 86400000;
 
-  Socrates.prototype.sessionExpiresIn = 86400000;
+  Socrates.prototype.attachHandlers = function(selectors) {
+    var binding, elem, s, trackedElements, _i, _len, _results;
+    _results = [];
+    for (_i = 0, _len = selectors.length; _i < _len; _i++) {
+      s = selectors[_i];
+      console.log(s);
+      trackedElements = document.getElementsByClassName(s);
+      console.log(trackedElements);
+      _results.push((function() {
+        var _j, _len1, _results1;
+        _results1 = [];
+        for (_j = 0, _len1 = trackedElements.length; _j < _len1; _j++) {
+          elem = trackedElements[_j];
+          binding = elem.getAttribute('data-soc-binding') || 'click';
+          _results1.push(elem.addEventListener(binding, function(evnt) {
+            var data, v;
+            data = {};
+            data['entity-id'] = this.getAttribute('data-entity-id');
+            if (v = this.getAttribute('data-variation-ids')) {
+              data['variation-ids'] = v.split(/,\s*/);
+            }
+            return window.socrates.track(data);
+          }));
+        }
+        return _results1;
+      })());
+    }
+    return _results;
+  };
 
   Socrates.prototype.newSessionExpiry = function() {
     var expDate;
     expDate = new Date();
-    expDate.setTime(expDate.getTime() + sessionExpiresIn);
+    expDate.setTime(expDate.getTime() + this.sessionDuration);
     return expDate.toGMTString();
   };
 
@@ -37,9 +66,11 @@ Socrates = (function() {
     if ((c = this.readCookie({
       name: '_socc'
     }))) {
+      console.log('here!');
       this.session_id = c.value;
       return this.refreshCookie(c);
     } else {
+      console.log('nope, no cookie!');
       return this.initSession();
     }
   };
@@ -51,7 +82,7 @@ Socrates = (function() {
     found = null;
     for (_i = 0, _len = ary.length; _i < _len; _i++) {
       cookie = ary[_i];
-      cookie = cookie.replace(/$\s+/, '');
+      cookie = cookie.replace(/^\s+/, '');
       if (cookie.indexOf(cName) === 0) {
         found = cookie.substr(cookie.indexOf(cName), cookie.length);
       }
@@ -60,15 +91,16 @@ Socrates = (function() {
   };
 
   Socrates.prototype.setCookie = function(c) {
-    var cStr;
-    return cStr = "" + c.name + "=" + c.value + ";expires=" + c.expires + ";path=" + c.path;
+    return document.cookie = this.cookieString(c);
   };
 
   Socrates.prototype.refreshCookie = function(c) {
-    var cookie;
-    cookie = "" + c.name + "=" + c.value;
-    cookie += "expires=" + (this.newSessionExpiry());
-    return document.cookie = cookie;
+    c.expires = this.newSessionExpiry();
+    return document.cookie = this.cookieString(c);
+  };
+
+  Socrates.prototype.cookieString = function(c) {
+    return "" + c.name + "=" + c.value + ";expires=" + c.expires + ";path=" + c.path;
   };
 
   Socrates.prototype.initSession = function() {
@@ -79,6 +111,8 @@ Socrates = (function() {
       value: this.genSessionId(),
       expires: this.newSessionExpiry()
     };
+    console.log('cooooookie');
+    console.log(cookie);
     return this.setCookie(cookie);
   };
 
@@ -90,10 +124,11 @@ Socrates = (function() {
   };
 
   Socrates.prototype.track = function(hash) {
-    var trackHash;
-    trackHash = this.mergeHash(this.config, hash);
-    trackHash.time || (trackHash.time = new Date().getTime());
-    return addGIF(trackHash);
+    var trackData;
+    trackData = this.mergeHash(this.config, hash);
+    trackData.time || (trackData.time = new Date().getTime());
+    console.log(trackData);
+    return this.addGIF(trackData);
   };
 
   Socrates.prototype.addGIF = function(h) {
@@ -102,30 +137,28 @@ Socrates = (function() {
     gif = document.createElement('img');
     gif.src = src;
     gif.style.display = 'none';
-    s = document.getElementByTagName('script')[0];
+    s = document.getElementsByTagName('script')[0];
     return s.parentNode.insertBefore(gif, s);
   };
 
   Socrates.prototype.genGIFSrc = function(h) {
-    var p, src, _i, _len;
+    var p, src, v;
     src = h['server-url'] + '?';
-    for (_i = 0, _len = h.length; _i < _len; _i++) {
-      p = h[_i];
-      if (h.hasOwnProperty(p) && p !== 'server-url') {
-        src += "" + p + "=" + h[p] + "&";
+    for (p in h) {
+      v = h[p];
+      if (!(p === 'server-url')) {
+        src += "" + p + "=" + v + "&";
       }
     }
     return src = src.substr(0, src.length - 1);
   };
 
   Socrates.prototype.mergeHash = function(h1, h2) {
-    var h3, p, _i, _len;
+    var h3, p, v;
     h3 = h1;
-    for (_i = 0, _len = h2.length; _i < _len; _i++) {
-      p = h2[_i];
-      if (h2.hasOwnProperty(p)) {
-        h3[p] = p;
-      }
+    for (p in h2) {
+      v = h2[p];
+      h3[p] = v;
     }
     return h3;
   };
@@ -133,3 +166,7 @@ Socrates = (function() {
   return Socrates;
 
 })();
+
+document.addEventListener('DOMContentLoaded', function() {
+  return window.socrates = new Socrates(['socrates']);
+});

@@ -1,25 +1,38 @@
 class Socrates
 
-  constructor: (options = {}) ->
+  constructor: (selectors, options = {}) ->
     @getOrInitSession()
-    @defaultOptions['session-id'] = @sessionId
-    @config = @mergeHash(defaults, options)
+    @defaults['session-id'] = @sessionId
+    @config = @mergeHash(@defaults, options)
+    @attachHandlers(selectors)
+    # @track({'event-name': 'pageView'})
 
-  defaultOptions: {
+  defaults: {
     'app-name':'default',
     'agent-id':'default',
     'event-name':'default',
     'entity-id':'default',
-    'variation-ids':'default',
-    'server-url': @serverUrl
+    'variation-ids':[],
+    'server-url': 'http://localhost:7738/t.gif'
   }
 
-  serverUrl: 'http://localhost:7738/t.gif'
-  sessionExpiresIn: 86400000 # 1 day in ms
+  sessionDuration: 86400000 # 1 day in ms
+
+  attachHandlers: (selectors) ->
+    for s in selectors
+      trackedElements = document.getElementsByClassName(s)
+      for elem in trackedElements
+        binding = elem.getAttribute('data-soc-binding') || 'click'
+        elem.addEventListener binding, (evnt) ->
+          data = {}
+          data['entity-id'] = this.getAttribute('data-entity-id')
+          if v = this.getAttribute('data-variation-ids')
+            data['variation-ids'] = v.split(/,\s*/)
+          window.socrates.track(data)
 
   newSessionExpiry: ->
     expDate = new Date()
-    expDate.setTime(expDate.getTime()+sessionExpiresIn)
+    expDate.setTime(expDate.getTime()+@sessionDuration)
     expDate.toGMTString()
 
   getOrInitSession: ->
@@ -34,18 +47,20 @@ class Socrates
     cName = c.name + '='
     found = null
     for cookie in ary
-      cookie = cookie.replace(/$\s+/,'')
+      cookie = cookie.replace(/^\s+/,'')
       if(cookie.indexOf(cName) == 0)
         found = cookie.substr(cookie.indexOf(cName), cookie.length)
     found
 
   setCookie: (c) ->
-    cStr = "#{c.name}=#{c.value};expires=#{c.expires};path=#{c.path}"
+    document.cookie = @cookieString(c)
 
   refreshCookie: (c) ->
-    cookie = "#{c.name}=#{c.value}"
-    cookie += "expires=#{@newSessionExpiry()}"
-    document.cookie = cookie
+    c.expires = @newSessionExpiry()
+    document.cookie = @cookieString(c)
+
+  cookieString: (c) ->
+    "#{c.name}=#{c.value};expires=#{c.expires};path=#{c.path}"
 
   initSession: ->
     cookie = {
@@ -59,31 +74,37 @@ class Socrates
   genSessionId: ->
     rand1 = Math.floor(Math.random() * 100000)
     rand2 = Math.floor(Math.random() * 100000)
-    @sessionId = "#{rand1}#{new Date().getTime()}#{rand2}" # seems legit...
+    @sessionId = "#{rand1}#{new Date().getTime()}#{rand2}"
+    # 1/10000000000 (1 in ten billion) chance of collision in any given millisecond
 
   track: (hash) ->
-    trackHash = @mergeHash(@config,hash)
-    trackHash.time ||= new Date().getTime()
-    addGIF(trackHash)
+    trackData = @mergeHash(@config,hash)
+    trackData.time ||= new Date().getTime()
+    @addGIF(trackData)
 
   addGIF: (h)->
     src = @genGIFSrc(h)
     gif = document.createElement('img')
     gif.src = src
     gif.style.display = 'none'
-    s = document.getElementByTagName('script')[0]
+    s = document.getElementsByTagName('script')[0]
     s.parentNode.insertBefore(gif,s)
 
   genGIFSrc: (h)->
     src = h['server-url'] + '?'
-    for p in h
-      if(h.hasOwnProperty(p) && p != 'server-url')
-        src += "#{p}=#{h[p]}&"
+    for p, v of h
+      unless(p is 'server-url')
+        src += "#{p}=#{v}&"
     src = src.substr(0, src.length-1) # remove last '&'
 
   mergeHash: (h1, h2) ->
     h3 = h1
-    for p in h2
-      if(h2.hasOwnProperty(p))
-        h3[p] = p
+    for p, v of h2
+      h3[p] = v
     h3
+document.addEventListener 'DOMContentLoaded', ->
+  window.socrates = new Socrates(['socrates'])
+
+
+
+
