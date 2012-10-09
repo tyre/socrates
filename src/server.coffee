@@ -1,6 +1,7 @@
 SocratesSettings = require("../settings.js").settings
 
-[$, http, url, router, redisClient] = [require('jquery'),require('http'),require('url'),require('router')(),require('redis').createClient()]
+[$, http, url, router, redis] = [require('jquery'),require('http'),require('url'),require('router')(),require('redis')]
+redisClient = redis.createClient()
 server = http.createServer(router)
 
 
@@ -20,8 +21,15 @@ server.listen SocratesSettings.port
 
 storeInRedis = (data) ->
   redisKeyFor data, (key, setKey) ->
-    redisClient.hset(key, data)
-    redisClient.sadd(setKey, key)
+    redisClient.hmset(key, hashToArray(data), redis.print)
+    redisClient.sadd(setKey, key, redis.print)
+
+hashToArray = (hash) ->
+  a = []
+  for k,v of hash
+    a.push(k)
+    a.push(v)
+  a
 
 redisKeyFor = (data, callback) ->
   jqxhr = $.get(SocratesSettings.keyGenUrl, data)
